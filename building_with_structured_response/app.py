@@ -5,11 +5,16 @@ from groq import Groq
 
 load_dotenv()
 
-DEFAULT_SYSTEM_PROMPT = """You are a data analysis assistant. \
-    Your goal is to provide accurate, useful, and relevant \
-        analysis for my request. Return only valid JSON or Markdown output."""
+DEFAULT_SYSTEM_PROMPT = """You are a data analysis assistant. Your task is to analyze the provided text and return a JSON object with these exact fields:
+{
+  "summary": "A brief 1-2 sentence summary of the key points",
+  "sentiment": "One of: positive, negative, or neutral",
+  "tags": ["tag1", "tag2", "tag3"]
+}
 
-DEFAULT_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+IMPORTANT: Return ONLY valid JSON, no other text or explanation."""
+
+DEFAULT_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
 _groq_client: Groq | None = None
 
@@ -30,16 +35,22 @@ def generate_chat(
     user_prompt: str,
     temperature: float = 0.3,
     model: str = DEFAULT_MODEL,
+    response_format: dict | None = None,
 ) -> str:
     client = get_groq_client()
-    chat_completion = client.chat.completions.create(
-        messages=[
+    kwargs = {
+        "messages": [
             {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ],
-        model=model,
-        temperature=temperature,
-    )
+        "model": model,
+        "temperature": temperature,
+    }
+
+    if response_format:
+        kwargs["response_format"] = response_format
+
+    chat_completion = client.chat.completions.create(**kwargs)
 
     return chat_completion.choices[0].message.content or ""
 

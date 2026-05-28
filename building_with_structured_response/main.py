@@ -1,9 +1,12 @@
 import json
+
+import requests
+from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-
 from app import generate_chat
+from generate_sythetic_data import generate_qa_from_text
 
 
 class AnalysisRequest(BaseModel):
@@ -15,6 +18,15 @@ class AnalysisResponse(BaseModel):
     summary: str
     sentiment: str
     tags: list[str]
+
+
+class GenerateDataRequest(BaseModel):
+    prompt: str
+    temperature: float = 0.3
+
+
+class GenerateDataResponse(BaseModel):
+    data: dict
 
 
 app = FastAPI(title="Building with LLMs API")
@@ -54,4 +66,29 @@ def analysis(request: AnalysisRequest) -> AnalysisResponse:
         raise HTTPException(
             status_code=500,
             detail="Failed to generate analysis",
+        ) from exc
+
+
+@app.post("/generate_data", response_model=GenerateDataResponse)
+def data_generation(request: GenerateDataRequest) -> GenerateDataResponse:
+    try:
+        # Crawl the Paul Graham webpage
+        response = requests.get("https://paulgraham.com/greatwork.html")
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        body = soup.find("body")
+        if body:
+            text = body.get_text(separator=" ", strip=True)
+        else:
+            text = ""
+
+        # Generate Q&A from the crawled text
+        questions = generate_qa_from_text(text)
+        return GenerateDataResponse(data=questions.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate data",
         ) from exc
