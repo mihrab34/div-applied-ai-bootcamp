@@ -33,7 +33,7 @@ Create a `.env` file in the project directory with your Groq API credentials:
 
 ```
 GROQ_API_KEY=your_api_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_MODEL=your_preferred_genai_model
 ```
 
 ### 3. Choose a Project and Install Dependencies
